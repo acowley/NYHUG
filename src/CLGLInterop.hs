@@ -25,7 +25,7 @@ initFromGL devType =
      q <- clCreateCommandQueue context dev []
      return $ OpenCLState dev context q
 
-imageFromGL2D :: TextureObject -> CL (CLImage2 a)
+imageFromGL2D :: TextureObject -> CL (CLImage n a)
 imageFromGL2D tex@(TextureObject t) =
   do c <- clContext `fmap` ask
      liftIO $ 
@@ -46,4 +46,3 @@ bufferFromGL bo@(BufferObject b) =
                peek ptr :: IO GLint
           CLBuffer (fromIntegral n `quot` sizeOf (undefined::a)) `fmap`
             clCreateFromGLBuffer c [CL_MEM_READ_WRITE] b
-
