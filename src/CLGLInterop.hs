@@ -1,5 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables #-}
-module CLGLInterop (initFromGL, bufferFromGL, imageFromGL2D) where
+module CLGLInterop (initFromGL, bufferFromGL, imageFromGL2D,
+                    withGLObjects) where
 import Control.Parallel.CLUtil
 import Control.Parallel.CLUtil.Monad
 import Control.Parallel.CLUtil.Monad.CL
@@ -46,3 +47,14 @@ bufferFromGL bo@(BufferObject b) =
                peek ptr :: IO GLint
           CLBuffer (fromIntegral n `quot` sizeOf (undefined::a)) `fmap`
             clCreateFromGLBuffer c [CL_MEM_READ_WRITE] b
+
+withGLObjects :: [CLMem] -> CL r -> CL r
+withGLObjects obs m = do q <- clQueue `fmap` ask
+                         liftIO $ do ev <- clEnqueueAcquireGLObjects q obs []
+                                     clWaitForEvents [ev]
+                                     clReleaseEvent ev
+                         r <- m
+                         liftIO $ do ev <- clEnqueueReleaseGLObjects q obs []
+                                     clWaitForEvents [ev]
+                                     clReleaseEvent ev
+                         return r
