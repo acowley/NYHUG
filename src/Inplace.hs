@@ -23,7 +23,7 @@ showData = show . unsafePerformIO . readIORef
 {-# NOINLINE showData #-}
 
 -- The operation we're calling through the FFI mutates its argument
--- in-place. hiding (putStrLn)
+-- in-place.
 foreignOp :: MyData -> IO ()
 foreignOp = flip modifyIORef' succ
 
@@ -62,6 +62,7 @@ timed m = do t <- getCurrentTime
              let dt = realToFrac (t' `diffUTCTime` t) :: Double
              printf "Calculation took %.1fs\n" dt
              return r
+
 main :: IO ()
 main = do timed $
             do let x = myData 3
@@ -77,5 +78,5 @@ main = do timed $
                    z = inc . inc . inc $ q
                mapM (async . evaluate) [y,z] >>= mapM_ wait
                putStrLn $ "y + z = " ++ showData (add y z)
-          
+
 {-# RULES "op/compose" forall f g. op f . op g = op (\x -> g x >> f x) #-}
