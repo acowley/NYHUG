@@ -57,9 +57,6 @@ mkBlur = do k <- getKernel "etc/ripples.cl" "localMax"
         stepY = V2 0 1 :: V2 CInt
         w = Work2D 640 480
         n = 4 :: CInt
-        -- mask :: V.Vector CFloat
-        -- mask = let h = [0.05,0.09,0.12,0.15]
-        --        in V.fromList $ h ++ 0.16 : reverse h 
 
 -- | Refresh a 'TextureObject' with images from a camera, and dump an
 -- edge image into the given function.
