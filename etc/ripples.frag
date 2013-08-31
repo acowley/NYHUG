@@ -6,5 +6,4 @@ in vec4 vcolor;
 
 void main() {
   fragColor = min(vec4(1.0f), texture(tex, texCoord) + vcolor);
-  //fragColor = vec4(1.0);
 }

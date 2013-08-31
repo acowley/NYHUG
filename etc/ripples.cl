@@ -8,7 +8,6 @@ __kernel void ripple(read_only image2d_t img, global float4* verts) {
   const float2 c = v.xz * 0.5f + 0.5f;
   const float e = read_imagef(img, sampler, c).x;
   verts[i] = (float4)(v.x,e*0.1f,v.z,v.w);
-  //verts[i] = (float4)(v.x,min(0.1f, e*0.5f),v.z,v.w);
 }
 
 __constant sampler_t samplernn = CLK_NORMALIZED_COORDS_FALSE |
@@ -18,14 +17,12 @@ __constant sampler_t samplernn = CLK_NORMALIZED_COORDS_FALSE |
 __kernel void localMax(read_only image2d_t img, 
                        write_only image2d_t blurred,
                        int2 step,
-                       //constant float* mask,
                        int maskSize) {
   const size_t u = get_global_id(0);
   const size_t v = get_global_id(1);
   const int2 uv = (int2)(u,v);
   float m = 0.0f;
   for(int i = -maskSize; i < maskSize+1; ++i) {
-    //m += mask[i+maskSize] * read_imagef(img, samplernn, uv+i*step).x;
     m = max(m, read_imagef(img, samplernn, uv+i*step).x);
   }
   write_imagef(blurred, uv, m);

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds, TypeOperators, TupleSections #-}
 import Control.Applicative
+import Control.Monad (join)
 import Control.Parallel.CLUtil
 import Control.Parallel.CLUtil.Monad
 import CLGLInterop
@@ -10,15 +11,20 @@ import Graphics.GLUtil
 import Graphics.GLUtil.Camera3D
 import Graphics.Rendering.OpenGL
 import Graphics.UI.GLFW (Key(KeyEsc))
+import Graphics.VinylGL
+import Keyboard3D (moveCamera)
 import Linear
 import OpenCV.HighCV
 import OpenCV.PixelUtils (packPixels)
-import Keyboard3D (moveCamera)
-import Graphics.VinylGL
+import Paths_NYHUG
+import System.FilePath
 import Window (initGL, UI(..))
 
 type AppInfo = PlainRec '[ "proj"  ::: M44 GLfloat ]
 type Pos = "vertexPos" ::: V4 GLfloat
+
+shaderFile :: FilePath -> IO FilePath
+shaderFile = getDataFileName . ("etc"</>)
 
 pos :: Pos
 pos = Field
@@ -41,7 +47,7 @@ ripple b = do verts <- bufferFromGL b :: CL (CLBuffer (V4 Float))
               img <- allocImage [CL_MEM_READ_ONLY] sz :: CL (CLImage1 Float)
               img' <- allocImage [CL_MEM_READ_WRITE] sz :: CL (CLImage1 Float)
               let cleanup = () <$ (releaseObject verts >> releaseObject img)
-              k <- getKernel "etc/ripples.cl" "ripple"
+              k <- liftIO (shaderFile "ripples.cl") >>= flip getKernel "ripple"
               blur <- mkBlur
               return . (,cleanup) $ \e -> 
                 do writeImage img (V.map ((/255) . fromIntegral) e)
@@ -50,7 +56,7 @@ ripple b = do verts <- bufferFromGL b :: CL (CLBuffer (V4 Float))
                      runKernelCL k img' verts workSize
 
 mkBlur :: CL (CLImage n a -> CLImage n a -> CL ())
-mkBlur = do k <- getKernel "etc/ripples.cl" "localMax"
+mkBlur = do k <- liftIO (shaderFile "ripples.cl") >>= flip getKernel "localMax"
             return $ \i b -> do () <- runKernelCL k i b stepX n w
                                 runKernelCL k i b stepY n w
   where stepX = V2 1 0 :: V2 CInt
@@ -85,7 +91,8 @@ setup = do clearColor $= Color4 0.3 0.6 0.3 1
            gpu <- initFromGL CL_DEVICE_TYPE_GPU
            (updateEdges,cleanup) <- runCL gpu . ripple $ getVertexBuffer vb
            refresh <- textureCam $ runCL gpu . updateEdges
-           s <- loadShaderProgram ("etc/ripples.vert") ("etc/ripples.frag")
+           s <- join $ loadShaderProgram <$> shaderFile "ripples.vert"
+                                         <*> shaderFile "ripples.frag"
            vao <- makeVAO $
                   do currentProgram $= Just (program s)
                      enableVertices' s vb
